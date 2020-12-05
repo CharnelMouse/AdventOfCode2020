@@ -50,7 +50,7 @@ valid_values <- function(passport) {
         c("amb", "blu", "brn", "gry", "grn", "hzl", "oth")
       ),
       nchar(pid) == 9,
-      all(is.element(unlist(strsplit(pid, "")), 0:9))
+      all_chars_in(pid, 0:9)
     )
   })
 }
