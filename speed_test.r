@@ -7,5 +7,6 @@ microbenchmark::microbenchmark(
   source("5.r"),
   source("6.r"),
   source("7.r"),
-  source("8.r")
+  source("8.r"),
+  setup = expression(rm(list = ls()))
 )
