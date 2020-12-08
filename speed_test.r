@@ -1,5 +1,6 @@
 microbenchmark::microbenchmark(
-  source("1.r"),
+  source("1-short.r"),
+  source("1-quick.r"),
   source("2.r"),
   source("3.r"),
   source("4.r"),
