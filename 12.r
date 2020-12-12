@@ -17,15 +17,13 @@ run <- function(directions, amounts, facing) {
   c(horizontal, vertical)
 }
 sum(abs(run(directions, amounts, "E"))) # part one: 2270
-# waypoint movement depends on ship position, so can't run them separately
-# like the ship bearing
 rotate <- function(pos, times_cc) {
-  if (times_cc == 0)
-    return(pos)
-  if (times_cc > 0)
-    rotate(c(-pos[2], pos[1]), times_cc - 1)
-  else
-    rotate(c(pos[2], -pos[1]), times_cc + 1)
+  switch(
+    as.integer(times_cc),
+    c(-pos[2], pos[1]),
+    -pos,
+    c(pos[2], -pos[1])
+  )
 }
 way_run <- function(directions, amounts, way_start, ship_start) {
   if (length(directions) == 0)
@@ -40,7 +38,7 @@ way_run <- function(directions, amounts, way_start, ship_start) {
     S = step(way_start + c(0, -am), ship_start),
     W = step(way_start + c(-am, 0), ship_start),
     L = step(rotate(way_start, am/90), ship_start),
-    R = step(rotate(way_start, -am/90), ship_start),
+    R = step(rotate(way_start, 4 - am/90), ship_start),
     F = step(way_start, ship_start + way_start*am)
   )
 }
