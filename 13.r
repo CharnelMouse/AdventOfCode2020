@@ -4,48 +4,24 @@ ids <- unlist(strsplit(x[2], ","))
 working <- ids != "x"
 working_ids <- as.integer(ids[working])
 waits <- -time %% working_ids
-min(waits) * working_ids[which.min(waits)] # part one: 4938
+min_ind <- which.min(waits)
+waits[min_ind] * working_ids[min_ind] # part one: 4938
 # part two: solve x = -a mod b for all a,b, i.e. linear congruence problem
-# ax = c mod f and bx = d mod g has solution
-# ax - mf = c, bx - ng = d for some m, n
-# agx - mfg = cg, bfx - nfg = df,
-# agx = cg mod fg, bfx = df mod fg,
-# (ag-bf)x = cg-df mod bd
-# x = (ag-bf)^{-1} (cg-df) mod bd
-set_times <- which(working) - 1L
 # Have to add package for large numbers here, base %% can't cope
-# Only for as.bigz, mod.bigz, divq.bigz; not using gcd.bigz, inv.bigz
+# Only for as.bigz, mod.bigz, divq.bigz; not using gcd.bigz or gcdex
 # i.e. only replacing base functions that break for big integers
 library(gmp)
-# we make functions for modular inverse first, using extended Euler
-# r = gcd, s and t are s.t. s*x + t*y = 1
-# we don't care about s, since x is the modulus and will disappear
-# when calculating inverse, so we don't track it
-gcd <- function(x, y) {
-  if (x == 0)
-    return(y)
-  gcd(mod.bigz(y, x), x)
-}
-eeacc <- function(r1, r2, t1, t2) {
+eeacc <- function(r1, r2, s1, s2, t1, t2) {
   if (r1 == 0)
-    return(c(r2, t2))
+    return(c(r2, s2, t2))
   q <- divq.bigz(r2, r1)
-  eeacc(sub.bigz(r2, q*r1), r1, sub.bigz(t2, q*t1), t1)
+  eeacc(
+    sub.bigz(r2, q*r1), r1,
+    sub.bigz(s2, q*s1), s1,
+    sub.bigz(t2, q*t1), t1
+  )
 }
-extended_euclid <- function(val1, val2) {
-  if (val1 < val2)
-    stop(paste("val1 must be larger", val1, val2))
-  if (val2 < 0)
-    stop("negative val2")
-  eeacc(val2, val1, 1, 0)
-}
-modinv <- function(val, mod) {
-  val <- mod.bigz(val, mod)
-  euc <- extended_euclid(mod, val)
-  if (euc[1] != 1)
-    stop(paste0("gcd(", val, ", ", mod, ") = ", euc[1], " > 1, no inverse"))
-  as.bigz(euc[2], mod)
-}
+extended_euclid <- function(val1, val2) eeacc(val2, val1, 0, 1, 1, 0)
 resolve <- function(x, y) {
   val1 <- as.bigz(x, NA)
   val2 <- as.bigz(y, NA)
@@ -57,12 +33,13 @@ resolve <- function(x, y) {
     else
       stop(paste("no solutions for x =", val1, "%%", mod1, "and", val2, "%%", mod2))
   }
-  mod_gcd <- gcd(min(mod1, mod2), max(mod1, mod2))
-  left <- divq.bigz(mod2 - mod1, mod_gcd)
-  right <- divq.bigz(val1*mod2 - val2*mod1, mod_gcd)
-  new_mod <- divq.bigz(mod1*mod2, mod_gcd)
-  modinv(left, new_mod)*right
+  eul_mod <- extended_euclid(mod1, mod2)
+  as.bigz(
+    divq.bigz(mod1*eul_mod[2]*val2 + mod2*eul_mod[3]*val1, eul_mod[1]),
+    divq.bigz(mod1*mod2, eul_mod[1])
+  )
 }
-congruences <- as.bigz(-set_times, working_ids)
-res <- Reduce(resolve, congruences)
-format(as.numeric(res), scientific = FALSE) # part two: 230903629977901
+set_times <- which(working) - 1L
+# part two: 230903629977901 mod 2283338533368659
+res <- Reduce(resolve, as.bigz(-set_times, working_ids))
+format(as.numeric(res), scientific = FALSE)
