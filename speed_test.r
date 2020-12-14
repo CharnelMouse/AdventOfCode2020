@@ -14,5 +14,6 @@ microbenchmark::microbenchmark(
   source("11.r"),
   source("12.r"),
   source("13.r"),
+  source("14.r"),
   setup = expression(rm(list = ls()))
 )
