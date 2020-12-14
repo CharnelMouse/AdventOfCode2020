@@ -1,49 +1,52 @@
-x <- do.call(rbind, strsplit(readLines("14.txt"), " = ", fixed = TRUE))
-mask <- 0L
-# Inbuild converter int -> binary is only for 32-bit, so we need to write our own.
-singleBit <- function(x, bit) {
-  as.integer((x %% 2^(bit + 1)) %/% 2^bit)
-}
-toBin <- function(x, length) {
-  test <- any(x >= 2^length)
-  if (is.na(test))
-    stop(paste(x, collapse = "\n"))
-  if (test)
-    stop("too short")
-  vapply(x, singleBit, integer(length), (length - 1):0)
-}
-combine <- function(x, mask, length) {
-  bits <- toBin(x, length)
-  mask_chars <- unlist(strsplit(mask, ""))
-  bits[mask_chars == "0", ] <- 0
-  bits[mask_chars == "1", ] <- 1
-  colSums(2^((length - 1):0)*bits)
-}
-acc <- function(cmds, n_cmds, mask_inds, mem, length) {
-  if (length(mask_inds) == 0)
-    return(mem)
-  if (cmds[1, 1] != "mask")
-    stop(paste("block doesn't start with mask"))
-  block_indices <- 2:(if (length(mask_inds) == 1) n_cmds else mask_inds[2] - 1)
-  block_cmds <- cmds[block_indices, 1]
-  indices <- substr(block_cmds, 5, nchar(block_cmds) - 1)
-  vals <- gmp::as.bigz(cmds[block_indices, 2])
-  if (any(is.na(vals)))
-    stop(paste(cmds[block_indices, 2][is.na(vals)], collapse = "\n"))
-  masked_vals <- combine(vals, cmds[1, 2], length)
-  acc(
-    cmds[-(c(1, block_indices)), , drop = FALSE],
-    n_cmds - block_indices[length(block_indices)],
-    mask_inds[-1] - block_indices[length(block_indices)],
-    `[<-`(mem, indices, masked_vals),
-    length
+x <- strsplit(readLines("14.txt"), " = ", fixed = TRUE)
+cmds <- vapply(x, `[`, character(1), 1)
+vals <- vapply(x, `[`, character(1), 2)
+mask_breaks <- cmds == "mask"
+# work backwards, so we can remove assignments at addresses that are changed later
+mem_cmds <- rev(cmds[!mask_breaks])
+mem_addresses <- as.numeric(substring(mem_cmds, 5, nchar(mem_cmds) - 1))
+mem_vals <- rev(as.numeric(vals[!mask_breaks]))
+mem_block_lengths <- rev(diff(c(which(mask_breaks), length(cmds) + 1L)) - 1L)
+mem_masks <- rep(rev(vals[mask_breaks]), mem_block_lengths)
+# part one
+# remove assigments at addresses changed again later
+dup_address <- duplicated(mem_addresses)
+used_addresses <- mem_addresses[!dup_address]
+used_vals <- mem_vals[!dup_address]
+used_masks <- mem_masks[!dup_address]
+# no numeric -> binary converter, just from 32-bit int (to bits), so we write our own
+# numbers on rows
+numToBin <- function(num, length) {
+  vapply(
+    (length - 1):0,
+    function(n) (num %% 2^(n + 1)) %/% 2^n,
+    numeric(length(num))
   )
 }
-run <- function(cmds, length) {
-  acc(cmds, nrow(cmds), which(cmds[, 1] == "mask"), numeric(), length)
+mask_val <- function(vals, masks) {
+  if (length(vals) != length(masks))
+    stop("inputs must be equal length")
+  len <- nchar(masks[1])
+  valBins <- numToBin(vals, len)
+  maskBins <- do.call(rbind, strsplit(masks, "", fixed = TRUE))
+  finalBins <- ifelse(maskBins == "X", valBins, suppressWarnings(as.numeric(maskBins)))
+  colSums(2^((len - 1):0) * t(finalBins))
 }
-res <- run(x, 36)
-format(sum(res), scientific = FALSE) # part one: 10050490168421
+format(sum(mask_val(used_vals, used_masks)), scientific = FALSE) # part one: 10050490168421
+# part two
+# mask addresses before checking for duplicates
+mask_single_address_bin <- function(addBin, maskBin)
+mask_address <- function(addresses, masks) {
+  if (length(addresses) != length(masks))
+    stop("inputs must be equal length")
+  len <- nchar(masks[1])
+  addBins <- numToBin(addresses, len)
+  maskBins <- do.call(rbind, strsplit(masks, "", fixed = TRUE))
+  finalBins <- ifelse(maskBins == "X", addBins, suppressWarnings(as.numeric(maskBins)))
+  colSums(2^((len - 1):0) * t(finalBins))
+}
+
+
 mask_index <- function(index, mask, length) {
   bits <- toBin(index, length)
   mask_chars <- unlist(strsplit(mask, ""))
