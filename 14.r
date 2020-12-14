@@ -7,13 +7,14 @@ mem_cmds <- rev(cmds[!mask_breaks])
 mem_addresses <- as.numeric(substring(mem_cmds, 5, nchar(mem_cmds) - 1))
 mem_vals <- rev(as.numeric(vals[!mask_breaks]))
 mem_block_lengths <- rev(diff(c(which(mask_breaks), length(cmds) + 1L)) - 1L)
-mem_masks <- rep(rev(vals[mask_breaks]), mem_block_lengths)
+mem_masks <- rev(vals[mask_breaks])
+blocked_masks <- rep(mem_masks, mem_block_lengths)
 # part one
 # remove assigments at addresses changed again later
 dup_address <- duplicated(mem_addresses)
 used_addresses <- mem_addresses[!dup_address]
 used_vals <- mem_vals[!dup_address]
-used_masks <- mem_masks[!dup_address]
+used_masks <- blocked_masks[!dup_address]
 # no numeric -> binary converter, just from 32-bit int (to bits), so we write our own
 # numbers on rows
 numToBin <- function(num, length) {
@@ -35,79 +36,33 @@ mask_val <- function(vals, masks) {
 format(sum(mask_val(used_vals, used_masks)), scientific = FALSE) # part one: 10050490168421
 # part two
 # mask addresses before checking for duplicates
-mask_single_address_bin <- function(addBin, maskBin)
+n_float <- function(masks) {
+  maskBins <- do.call(rbind, strsplit(masks, "", fixed = TRUE))
+  rowSums(maskBins == "X")
+}
 mask_address <- function(addresses, masks) {
   if (length(addresses) != length(masks))
     stop("inputs must be equal length")
   len <- nchar(masks[1])
-  addBins <- numToBin(addresses, len)
   maskBins <- do.call(rbind, strsplit(masks, "", fixed = TRUE))
-  finalBins <- ifelse(maskBins == "X", addBins, suppressWarnings(as.numeric(maskBins)))
-  colSums(2^((len - 1):0) * t(finalBins))
-}
-
-
-mask_index <- function(index, mask, length) {
-  bits <- toBin(index, length)
-  mask_chars <- unlist(strsplit(mask, ""))
-  bits[mask_chars == "1", ] <- 1
-  n_Xs <- sum(mask_chars == "X")
-  vapply(
-    seq.int(2^n_Xs) - 1L,
-    function(n) {
-      val <- bits
-      val[mask_chars == "X", ] <- toBin(n, n_Xs)
-      paste0(val, collapse = "")
-    },
-    character(1)
+  n_floats <- rowSums(maskBins == "X")
+  blocked_adds <- rep(addresses, 2^n_floats)
+  # masks on columns
+  blocked_maskBins <- t(maskBins[rep(seq.int(length(masks)), 2^n_floats), ])
+  blocked_maskBins[blocked_maskBins == "0"] <- NA_character_
+  float_values <- do.call(
+    c,
+    lapply(n_floats, function(n) t(expand.grid(rep(list(0:1), n))))
   )
+  blocked_maskBins[!is.na(blocked_maskBins) & blocked_maskBins == "X"] <- float_values
+  # addresses on columns
+  blocked_addBins <- t(numToBin(blocked_adds, len))
+  masked_addBins <- blocked_addBins
+  mask_has_effects <- !is.na(blocked_maskBins)
+  masked_addBins[mask_has_effects] <- as.numeric(blocked_maskBins[mask_has_effects])
+  dim(masked_addBins) <- c(len, length(masked_addBins)/len) # only useful for length 1
+  colSums(2^((len - 1):0) * masked_addBins)
 }
-update_mem <- function(mem, mem_addresses, vals, indices) {
-  ind_matches <- vapply(
-    indices,
-    function(n) {
-      match <- which(n == mem_addresses)
-      if (length(match) == 0) NA_integer_ else match
-    },
-    integer(1)
-  )
-  new <- is.na(ind_matches)
-  mem[ind_matches[!new]] <- vals[!new]
-  new_mem <- c(mem, vals[new])
-  new_mem_addresses <- c(mem_addresses, indices[new])
-  if (length(new_mem) != length(mem) + sum(new))
-    stop("wat")
-  list(new_mem, new_mem_addresses)
-}
-acc2 <- function(cmds, mask, mem, mem_addresses, length) {
-  if (nrow(cmds) == 0)
-    return(mem)
-  if (cmds[1, 1] == "mask")
-    acc2(cmds[-1, , drop = FALSE], cmds[1, 2], mem, mem_addresses, length)
-  else{
-    address <- substr(cmds[1, 1], 5, nchar(cmds[1, 1]) - 1)
-    masked_addresses <- mask_index(
-      as.numeric(address),
-      mask,
-      length
-    )
-    new_mem <- update_mem(
-      mem,
-      mem_addresses,
-      rep(cmds[1, 2], length(masked_addresses)),
-      masked_addresses
-    )
-    acc2(
-      cmds[-1, , drop = FALSE],
-      mask,
-      new_mem[[1]],
-      new_mem[[2]],
-      length
-    )
-  }
-}
-run2 <- function(cmds, length) {
-  acc2(cmds, "", character(), character(), length)
-}
-res2 <- run2(x, 36)
-format(sum(gmp::as.bigz(res2)), scientific = FALSE) # part two: 2173858456958
+masked_addresses <- mask_address(mem_addresses, blocked_masks)
+used_vals2 <- rep(mem_vals, 2^n_float(blocked_masks))[!duplicated(masked_addresses)]
+format(sum(used_vals2), scientific = FALSE) # part two: 2173858456958
