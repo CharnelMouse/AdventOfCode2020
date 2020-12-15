@@ -7,9 +7,10 @@
 numbers <- as.integer(c(0,5,4,1,10,14,7))
 iterate <- function(current_n, current_index, end, last_apps) {
   # use while loops instead of recursion, else part two runs into stack limit
+  # probably faster with a hash, but I'm trying to do these in base R
   while (current_index < end) {
     current_last_app <- last_apps[current_n + 1]
-    if (!is.na(current_last_app)) {
+    if (!anyNA(current_last_app)) { # marginally faster than !is.na(current_last_app)
       last_apps[current_n + 1] <- current_index
       current_n <- current_index - current_last_app
       current_index <- current_index + 1
