@@ -52,14 +52,18 @@ mask_address <- function(addresses, masks) {
   blocked_maskBins[blocked_maskBins == "0"] <- NA_character_
   float_values <- do.call(
     c,
-    lapply(n_floats, function(n) t(expand.grid(rep(list(0:1), n))))
+    lapply(
+      n_floats,
+      function(n) t(expand.grid(rep(list(0:1), n), KEEP.OUT.ATTRS = FALSE))
+    )
   )
   blocked_maskBins[!is.na(blocked_maskBins) & blocked_maskBins == "X"] <- float_values
   # addresses on columns
   blocked_addBins <- t(numToBin(blocked_adds, len))
+  # Changing masked_addBins in place, creation using ifelse is slow
   masked_addBins <- blocked_addBins
   mask_has_effects <- !is.na(blocked_maskBins)
-  masked_addBins[mask_has_effects] <- as.numeric(blocked_maskBins[mask_has_effects])
+  masked_addBins[mask_has_effects] <- as.numeric(blocked_maskBins[mask_has_effects] == "1")
   dim(masked_addBins) <- c(len, length(masked_addBins)/len) # only useful for length 1
   colSums(2^((len - 1):0) * masked_addBins)
 }
