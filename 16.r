@@ -29,53 +29,60 @@ other_df <- data.frame(
     lapply(strsplit(other, ",", fixed = TRUE), as.integer)
   )
 )
+n_rules <- nrow(rules_df)
+n_fields <- ncol(other_df)
 
 rule_match <- function(ticket, rules) {
   # field x rule
   apply(rules[, -1], 1, findInterval, x = ticket)
 }
-invalid_field <- function(ticket, rules) {
-  intervals <- rule_match(ticket, rules)
-  # field
-  apply(intervals, 1, function(ints) all(is.element(ints, c(0, 2, 4))))
+# field x rule x ticket
+rule_matches <- vapply(
+  1:nrow(other_df),
+  function(n) rule_match(other_df[n, ], rules_df),
+  matrix(0L, nrow = n_fields, ncol = n_rules)
+)
+invalid <- function(rule_matches) {
+  # ticket x field
+  apply(
+    rule_matches,
+    c(3, 1),
+    function(ints) all(is.element(ints, c(0, 2, 4)))
+  )
 }
-invalid_entries <- t(apply(other_df, 1, invalid_field, rules_df))
+invalid_entries <- invalid(rule_matches)
 sum(other_df[invalid_entries]) # part one: 29851
 
-agreements <- function(ticket, rules) {
-  intervals <- rule_match(ticket, rules)
-  # field x rule
-  apply(intervals, 2, function(ints) is.element(ints, c(1, 3)))
-}
-possible_rule_matches <- function(tickets, rules) {
-  # field x rule
-  Reduce(
-    function(ls, n) {
-      p <- agreements(tickets[n, ], rules)
-      ls & p
-    },
-    1:nrow(tickets),
-    init = match(TRUE, ncol(tickets), nrow(rules))
+agreements <- function(rule_matches) {
+  # rule x field x ticket
+  apply(
+    rule_matches,
+    c(1, 3),
+    function(ints) is.element(ints, c(1, 3))
   )
+}
+possible_rule_positions <- function(rule_matches) {
+  # rule x field
+  apply(agreements(rule_matches), 1:2, all)
 }
 rp_acc <- function(possible, matches) {
   if (all(!is.na(matches)))
     return(matches)
-  single_matches <- rowSums(possible) == 1
-  new_ints <- apply(possible[single_matches, , drop = FALSE], 1, which)
+  single_matches <- colSums(possible) == 1
+  new_ints <- apply(possible[, single_matches, drop = FALSE], 2, which)
   new_matches <- `[<-`(
     matches,
     single_matches,
     new_ints
   )
-  new_possible <- `[<-`(possible, TRUE, new_ints, FALSE)
+  new_possible <- `[<-`(possible, new_ints, TRUE, FALSE)
   rp_acc(new_possible, new_matches)
 }
 rule_positions <- function(possible) {
-  rp_acc(possible, rep(NA_integer_, ncol(possible)))
+  rp_acc(possible, rep(NA_integer_, nrow(possible)))
 }
-valid_tickets <- other_df[!apply(invalid_entries, 1, any), , drop = FALSE]
-final_possible <- possible_rule_matches(valid_tickets, rules_df)
+valid_ticket_rule_matches <- rule_matches[, , apply(!invalid_entries, 1, all)]
+final_possible <- possible_rule_positions(valid_ticket_rule_matches)
 stopifnot(any(rowSums(final_possible) == 1))
 rule_locations <- rule_positions(final_possible)
 departure_rule_locations <- match(
