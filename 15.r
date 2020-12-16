@@ -4,7 +4,8 @@
 # then used that as index for last_app vector.
 # This would have taken a very long time to run in part two,
 # so assigning a large last_app vector in advance is better.
-numbers <- as.integer(c(0,5,4,1,10,14,7))
+numbers <- as.numeric(unlist(strsplit(readLines("15.txt"), ",")))
+# numbers <- as.integer(c(0,5,4,1,10,14,7))
 iterate <- function(current_n, current_index, end, last_apps) {
   # use while loops instead of recursion, else part two runs into stack limit
   # probably faster with a hash, but I'm trying to do these in base R
@@ -33,4 +34,4 @@ start <- function(numbers, end) {
   iterate(numbers[n_start], n_start, end, last_apps)
 }
 start(numbers, 2020) # part one: 203
-start(numbers, 30000000) # part two
+start(numbers, 30000000) # part two: 9007186
