@@ -44,11 +44,7 @@ rule_matches <- vapply(
 )
 invalid <- function(rule_matches) {
   # ticket x field
-  apply(
-    rule_matches,
-    c(3, 1),
-    function(ints) all(is.element(ints, c(0, 2, 4)))
-  )
+  apply(rule_matches ,c(3, 1), function(ints) all(is.element(ints, c(0, 2, 4))))
 }
 invalid_entries <- invalid(rule_matches)
 sum(other_df[invalid_entries]) # part one: 29851
@@ -69,6 +65,7 @@ rp_acc <- function(possible, matches) {
   if (all(!is.na(matches)))
     return(matches)
   single_matches <- colSums(possible) == 1
+  stopifnot(any(single_matches))
   new_ints <- apply(possible[, single_matches, drop = FALSE], 2, which)
   new_matches <- `[<-`(
     matches,
@@ -82,12 +79,11 @@ rule_positions <- function(possible) {
   rp_acc(possible, rep(NA_integer_, nrow(possible)))
 }
 valid_ticket_rule_matches <- rule_matches[, , apply(!invalid_entries, 1, all)]
-final_possible <- possible_rule_positions(valid_ticket_rule_matches)
-stopifnot(any(rowSums(final_possible) == 1))
-rule_locations <- rule_positions(final_possible)
+possible_positions <- possible_rule_positions(valid_ticket_rule_matches)
+positions <- rule_positions(possible_positions)
 departure_rule_locations <- match(
   which(startsWith(rules_df[, 1], "departure")),
-  rule_locations
+  positions
 )
 own_entries <- as.integer(unlist(strsplit(own, ",", fixed = TRUE)))
 res <- prod(own_entries[departure_rule_locations])
