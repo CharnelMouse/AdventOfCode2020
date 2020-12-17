@@ -32,23 +32,28 @@ other_df <- data.frame(
 n_rules <- nrow(rules_df)
 n_fields <- ncol(other_df)
 
+## create main solution array
 rule_match <- function(ticket, rules) {
   # field x rule
   apply(rules[, -1], 1, findInterval, x = ticket)
 }
 # field x rule x ticket
+# main solution array, showing when a ticket's field passes a rule
 rule_matches <- vapply(
   1:nrow(other_df),
   function(n) rule_match(other_df[n, ], rules_df),
   matrix(0L, nrow = n_fields, ncol = n_rules)
 )
+
+## part one
 invalid <- function(rule_matches) {
   # ticket x field
   apply(rule_matches ,c(3, 1), function(ints) all(is.element(ints, c(0, 2, 4))))
 }
 invalid_entries <- invalid(rule_matches)
-sum(other_df[invalid_entries]) # part one: 29851
+sum(other_df[invalid_entries]) # 29851
 
+## part two
 agreements <- function(rule_matches) {
   # rule x field x ticket
   apply(
