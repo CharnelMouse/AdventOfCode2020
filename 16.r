@@ -41,47 +41,39 @@ rule_match <- function(ticket, rules) {
 # main solution array, showing when a ticket's field passes a rule
 rule_matches <- vapply(
   1:nrow(other_df),
-  function(n) rule_match(other_df[n, ], rules_df),
-  matrix(0L, nrow = n_fields, ncol = n_rules)
+  function(n) is.element(rule_match(other_df[n, ], rules_df), c(1, 3)),
+  matrix(TRUE, nrow = n_fields, ncol = n_rules)
 )
 
 ## part one
 invalid <- function(rule_matches) {
   # ticket x field
-  apply(rule_matches ,c(3, 1), function(ints) all(is.element(ints, c(0, 2, 4))))
+  apply(rule_matches ,c(3, 1), Negate(any))
 }
 invalid_entries <- invalid(rule_matches)
 sum(other_df[invalid_entries]) # 29851
 
 ## part two
-agreements <- function(rule_matches) {
-  # rule x field x ticket
-  apply(
-    rule_matches,
-    c(1, 3),
-    function(ints) is.element(ints, c(1, 3))
-  )
-}
 possible_rule_positions <- function(rule_matches) {
-  # rule x field
-  apply(agreements(rule_matches), 1:2, all)
+  # field x rule
+  apply(rule_matches, 1:2, all)
 }
 rp_acc <- function(possible, matches) {
   if (all(!is.na(matches)))
     return(matches)
-  single_matches <- colSums(possible) == 1
+  single_matches <- rowSums(possible) == 1
   stopifnot(any(single_matches))
-  new_ints <- apply(possible[, single_matches, drop = FALSE], 2, which)
+  new_ints <- apply(possible[single_matches, , drop = FALSE], 1, which)
   new_matches <- `[<-`(
     matches,
     single_matches,
     new_ints
   )
-  new_possible <- `[<-`(possible, new_ints, TRUE, FALSE)
+  new_possible <- `[<-`(possible, TRUE, new_ints, FALSE)
   rp_acc(new_possible, new_matches)
 }
 rule_positions <- function(possible) {
-  rp_acc(possible, rep(NA_integer_, nrow(possible)))
+  rp_acc(possible, rep(NA_integer_, ncol(possible)))
 }
 valid_ticket_rule_matches <- rule_matches[, , apply(!invalid_entries, 1, all)]
 possible_positions <- possible_rule_positions(valid_ticket_rule_matches)
