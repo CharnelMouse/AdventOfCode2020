@@ -1,6 +1,5 @@
 x <- do.call(rbind, strsplit(readLines("17.txt"), "", fixed = TRUE)) == "#"
 start <- array(x, dim = c(dim(x), 1))
-chars <- function(x) ifelse(x, "#", ".")
 # starting state and rules are z-symmetric, so needn't track strictly negative z
 iterate <- function(state, ylen, xlen, zlen, iter) {
   if (iter == 0)
@@ -40,18 +39,15 @@ run <- function(state, iter) {
 res <- run(start, 6)
 sum(res) + sum(res[, , -1]) # part one: 336
 
-# both z and w axes are now symmetric, but are also interchangeable.
-# in theory, we can therefore reduce storage size by only using the values where
-# 0 <= w <= z (from-zero indexing).
-# if a = max(abs(c(z, w))) and b = min(abs(c(z, w))), then
-# index(z, w) = a(a+1)/2 + b,
-# and when summing over all elements we count each index with the following
-# weights:
+# Both z and w axes are now symmetric, but are also interchangeable,
+# so we only store values for when 0 <= w <= z.
+# When summing over cells at the end, we weight the recorded cells with the
+# following weights:
 # 1, 4, 4, 4, 8, 4, 4, 8, 8, 4, 4, 8, 8, 8, 4, ...
 index <- function(z, w) {
-  a <- pmax(abs(z), abs(w))
-  b <- pmin(abs(z), abs(w))
-  a*(a + 1)/2 + b
+  az <- abs(z)
+  aw <- abs(w)
+  ifelse(az < aw, aw*(aw + 1)/2 + az, az*(az + 1)/2 + aw)
 }
 xpos <- function(index) {
   floor((sqrt(8*index + 1) - 1)/2)
@@ -87,17 +83,10 @@ iterate2 <- function(state, ylen, xlen, zlen, iter) {
       for (z in 0:(new_zlen - 1)) {
         z_xpos <- xpos(z)
         z_pos <- c(z_xpos, z - z_xpos*(z_xpos + 1)/2)
-        z_neighbours_pos <- outer(z_pos[1] + (-1):1, z_pos[2] + (-1):1, index)
-        # if (any(z_neighbours_pos + 1 > new_zlen))
-        #   stop(paste0(
-        #     "too big!",
-        #     "\nz (0-ind): ", paste(z, collapse = ", "),
-        #     "\nneighbours (0-ind): ", paste(z_neighbours_pos, collapse = ", "),
-        #     "\nz length: ", zlen,
-        #     "\nnew z length: ", new_zlen,
-        #     "\nexpanded state dims: ", paste(dim(expanded_state), collapse = ", "),
-        #     "\nz dim expanded?: ", expand_z
-        #   ))
+        z_neighbours_pos <- index(
+          rep(z_pos[1] + (-1):1, 3),
+          rep(z_pos[2] + (-1):1, each = 3)
+        )
         neighbours <- expanded_state[
           y + (-1):1,
           x + (-1):1,
