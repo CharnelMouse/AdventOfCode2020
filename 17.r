@@ -13,53 +13,29 @@ iterate <- function(state, ylen, xlen, zlen, iter) {
   new_ylen <- ylen + expand_yl + expand_yr
   new_xlen <- xlen + expand_xl + expand_xr
   new_zlen <- zlen + expand_z
+  new_lens <- c(new_ylen, new_xlen, new_zlen)
   # add empty cells at end of dims to prevent errors in neighbour lookups
   expanded_state <- array(
     FALSE,
-    dim = c(new_ylen + 1, new_xlen + 1, new_zlen + 1)
+    dim = new_lens + 1
   )
   expanded_state[expand_yl + 1:ylen, expand_xl + 1:xlen, 1:zlen] <- state
-  new_state <- array(
-    FALSE,
-    dim = c(new_ylen, new_xlen, new_zlen)
-  )
-  new_state[expand_yl + 1:ylen, expand_xl + 1:xlen, 1:zlen] <- state
-  new_state <- array(FALSE, c(new_ylen, new_xlen, new_zlen))
+  new_state <- array(FALSE, new_lens)
   for (x in 1:new_xlen) {
     for (y in 1:new_ylen) {
       for (z in 1:new_zlen) {
-        neighbours <- sum(
-          expanded_state[y - 1, x - 1, z - 1],
-          expanded_state[y    , x - 1, z - 1],
-          expanded_state[y + 1, x - 1, z - 1],
-          expanded_state[y - 1, x    , z - 1],
-          expanded_state[y    , x    , z - 1],
-          expanded_state[y + 1, x    , z - 1],
-          expanded_state[y - 1, x + 1, z - 1],
-          expanded_state[y    , x + 1, z - 1],
-          expanded_state[y + 1, x + 1, z - 1],
-          expanded_state[y - 1, x - 1, z    ],
-          expanded_state[y    , x - 1, z    ],
-          expanded_state[y + 1, x - 1, z    ],
-          expanded_state[y - 1, x    , z    ],
-          expanded_state[y + 1, x    , z    ],
-          expanded_state[y - 1, x + 1, z    ],
-          expanded_state[y    , x + 1, z    ],
-          expanded_state[y + 1, x + 1, z    ],
-          expanded_state[y - 1, x - 1, z + 1] * (1 + (z == 1)),
-          expanded_state[y    , x - 1, z + 1] * (1 + (z == 1)),
-          expanded_state[y + 1, x - 1, z + 1] * (1 + (z == 1)),
-          expanded_state[y - 1, x    , z + 1] * (1 + (z == 1)),
-          expanded_state[y    , x    , z + 1] * (1 + (z == 1)),
-          expanded_state[y + 1, x    , z + 1] * (1 + (z == 1)),
-          expanded_state[y - 1, x + 1, z + 1] * (1 + (z == 1)),
-          expanded_state[y    , x + 1, z + 1] * (1 + (z == 1)),
-          expanded_state[y + 1, x + 1, z + 1] * (1 + (z == 1)),
-          na.rm = TRUE
+        neighbours <- expanded_state[y + (-1):1, x + (-1):1, z + (-1):1]
+        # neighbours lengths varies depending on whether on left-hand boundary,
+        # since e.g. x[0:2] returns an two-length value
+        xy_len <- 9 - 3*sum(c(x, y) == 1) + all(c(x, y) == 1)
+        weights <- rep(
+          c(1, 1 + (z == 1)),
+          c(xy_len*(2 - (z == 1)), xy_len)
         )
+        weighted_sum <- sum(neighbours*weights)
         new_state[y, x, z] <- is.element(
-          sum(neighbours),
-          c(if (expanded_state[y, x, z]) 2, 3)
+          weighted_sum,
+          c(3, if (expanded_state[y, x, z]) 4)
         )
       }
     }
@@ -87,108 +63,33 @@ iterate2 <- function(state, ylen, xlen, zlen, wlen, iter) {
   new_xlen <- xlen + expand_xl + expand_xr
   new_zlen <- zlen + expand_z
   new_wlen <- wlen + expand_w
+  new_lens <- c(new_ylen, new_xlen, new_zlen, new_wlen)
   # add empty cells at end of dims to prevent errors in neighbour lookups
-  expanded_state <- array(
-    FALSE,
-    dim = c(new_ylen + 1, new_xlen + 1, new_zlen + 1, new_wlen + 1)
-  )
+  expanded_state <- array(FALSE, new_lens + 1)
   expanded_state[expand_yl + 1:ylen, expand_xl + 1:xlen, 1:zlen, 1:wlen] <- state
-  new_state <- array(
-    FALSE,
-    dim = c(new_ylen, new_xlen, new_zlen, new_wlen)
-  )
-  new_state[expand_yl + 1:ylen, expand_xl + 1:xlen, 1:zlen, 1:wlen] <- state
-  new_state <- array(FALSE, c(new_ylen, new_xlen, new_zlen, new_wlen))
+  new_state <- array(FALSE, new_lens)
   for (x in 1:new_xlen) {
     for (y in 1:new_ylen) {
       for (z in 1:new_zlen) {
         for (w in 1:new_wlen) {
-          neighbours <- sum(
-            expanded_state[y - 1, x - 1, z - 1, w - 1],
-            expanded_state[y    , x - 1, z - 1, w - 1],
-            expanded_state[y + 1, x - 1, z - 1, w - 1],
-            expanded_state[y - 1, x    , z - 1, w - 1],
-            expanded_state[y    , x    , z - 1, w - 1],
-            expanded_state[y + 1, x    , z - 1, w - 1],
-            expanded_state[y - 1, x + 1, z - 1, w - 1],
-            expanded_state[y    , x + 1, z - 1, w - 1],
-            expanded_state[y + 1, x + 1, z - 1, w - 1],
-            expanded_state[y - 1, x - 1, z    , w - 1],
-            expanded_state[y    , x - 1, z    , w - 1],
-            expanded_state[y + 1, x - 1, z    , w - 1],
-            expanded_state[y - 1, x    , z    , w - 1],
-            expanded_state[y    , x    , z    , w - 1],
-            expanded_state[y + 1, x    , z    , w - 1],
-            expanded_state[y - 1, x + 1, z    , w - 1],
-            expanded_state[y    , x + 1, z    , w - 1],
-            expanded_state[y + 1, x + 1, z    , w - 1],
-            expanded_state[y - 1, x - 1, z + 1, w - 1] * (1 + (z == 1)),
-            expanded_state[y    , x - 1, z + 1, w - 1] * (1 + (z == 1)),
-            expanded_state[y + 1, x - 1, z + 1, w - 1] * (1 + (z == 1)),
-            expanded_state[y - 1, x    , z + 1, w - 1] * (1 + (z == 1)),
-            expanded_state[y    , x    , z + 1, w - 1] * (1 + (z == 1)),
-            expanded_state[y + 1, x    , z + 1, w - 1] * (1 + (z == 1)),
-            expanded_state[y - 1, x + 1, z + 1, w - 1] * (1 + (z == 1)),
-            expanded_state[y    , x + 1, z + 1, w - 1] * (1 + (z == 1)),
-            expanded_state[y + 1, x + 1, z + 1, w - 1] * (1 + (z == 1)),
-            expanded_state[y - 1, x - 1, z - 1, w    ],
-            expanded_state[y    , x - 1, z - 1, w    ],
-            expanded_state[y + 1, x - 1, z - 1, w    ],
-            expanded_state[y - 1, x    , z - 1, w    ],
-            expanded_state[y    , x    , z - 1, w    ],
-            expanded_state[y + 1, x    , z - 1, w    ],
-            expanded_state[y - 1, x + 1, z - 1, w    ],
-            expanded_state[y    , x + 1, z - 1, w    ],
-            expanded_state[y + 1, x + 1, z - 1, w    ],
-            expanded_state[y - 1, x - 1, z    , w    ],
-            expanded_state[y    , x - 1, z    , w    ],
-            expanded_state[y + 1, x - 1, z    , w    ],
-            expanded_state[y - 1, x    , z    , w    ],
-            expanded_state[y + 1, x    , z    , w    ],
-            expanded_state[y - 1, x + 1, z    , w    ],
-            expanded_state[y    , x + 1, z    , w    ],
-            expanded_state[y + 1, x + 1, z    , w    ],
-            expanded_state[y - 1, x - 1, z + 1, w    ] * (1 + (z == 1)),
-            expanded_state[y    , x - 1, z + 1, w    ] * (1 + (z == 1)),
-            expanded_state[y + 1, x - 1, z + 1, w    ] * (1 + (z == 1)),
-            expanded_state[y - 1, x    , z + 1, w    ] * (1 + (z == 1)),
-            expanded_state[y    , x    , z + 1, w    ] * (1 + (z == 1)),
-            expanded_state[y + 1, x    , z + 1, w    ] * (1 + (z == 1)),
-            expanded_state[y - 1, x + 1, z + 1, w    ] * (1 + (z == 1)),
-            expanded_state[y    , x + 1, z + 1, w    ] * (1 + (z == 1)),
-            expanded_state[y + 1, x + 1, z + 1, w    ] * (1 + (z == 1)),
-            expanded_state[y - 1, x - 1, z - 1, w + 1] * (1 + (w == 1)),
-            expanded_state[y    , x - 1, z - 1, w + 1] * (1 + (w == 1)),
-            expanded_state[y + 1, x - 1, z - 1, w + 1] * (1 + (w == 1)),
-            expanded_state[y - 1, x    , z - 1, w + 1] * (1 + (w == 1)),
-            expanded_state[y    , x    , z - 1, w + 1] * (1 + (w == 1)),
-            expanded_state[y + 1, x    , z - 1, w + 1] * (1 + (w == 1)),
-            expanded_state[y - 1, x + 1, z - 1, w + 1] * (1 + (w == 1)),
-            expanded_state[y    , x + 1, z - 1, w + 1] * (1 + (w == 1)),
-            expanded_state[y + 1, x + 1, z - 1, w + 1] * (1 + (w == 1)),
-            expanded_state[y - 1, x - 1, z    , w + 1] * (1 + (w == 1)),
-            expanded_state[y    , x - 1, z    , w + 1] * (1 + (w == 1)),
-            expanded_state[y + 1, x - 1, z    , w + 1] * (1 + (w == 1)),
-            expanded_state[y - 1, x    , z    , w + 1] * (1 + (w == 1)),
-            expanded_state[y    , x    , z    , w + 1] * (1 + (w == 1)),
-            expanded_state[y + 1, x    , z    , w + 1] * (1 + (w == 1)),
-            expanded_state[y - 1, x + 1, z    , w + 1] * (1 + (w == 1)),
-            expanded_state[y    , x + 1, z    , w + 1] * (1 + (w == 1)),
-            expanded_state[y + 1, x + 1, z    , w + 1] * (1 + (w == 1)),
-            expanded_state[y - 1, x - 1, z + 1, w + 1] * (1 + (w == 1)) * (1 + (z == 1)),
-            expanded_state[y    , x - 1, z + 1, w + 1] * (1 + (w == 1)) * (1 + (z == 1)),
-            expanded_state[y + 1, x - 1, z + 1, w + 1] * (1 + (w == 1)) * (1 + (z == 1)),
-            expanded_state[y - 1, x    , z + 1, w + 1] * (1 + (w == 1)) * (1 + (z == 1)),
-            expanded_state[y    , x    , z + 1, w + 1] * (1 + (w == 1)) * (1 + (z == 1)),
-            expanded_state[y + 1, x    , z + 1, w + 1] * (1 + (w == 1)) * (1 + (z == 1)),
-            expanded_state[y - 1, x + 1, z + 1, w + 1] * (1 + (w == 1)) * (1 + (z == 1)),
-            expanded_state[y    , x + 1, z + 1, w + 1] * (1 + (w == 1)) * (1 + (z == 1)),
-            expanded_state[y + 1, x + 1, z + 1, w + 1] * (1 + (w == 1)) * (1 + (z == 1)),
-            na.rm = TRUE
+          neighbours2 <- expanded_state[y + (-1):1, x + (-1):1, z + (-1):1, w + (-1):1]
+          # neighbours lengths varies depending on whether on left-hand boundary,
+          # since e.g. x[0:2] returns an two-length value
+          xy_len <- 9 - 3*sum(c(x, y) == 1) + all(c(x, y) == 1)
+          xyz_weights <- rep(
+            c(1, 1 + (z == 1)),
+            c(xy_len*(2 - (z == 1)), xy_len)
           )
+          xyz_len <- length(xyz_weights)
+          weights <- rep(xyz_weights, 3 - (w == 1)) *
+            rep(
+              c(1, 1 + (w == 1)),
+              c(xyz_len*(2 - (w == 1)), xyz_len)
+            )
+          weighted_sum <- sum(neighbours2*weights, na.rm = TRUE)
           new_state[y, x, z, w] <- is.element(
-            sum(neighbours),
-            c(if (expanded_state[y, x, z, w]) 2, 3)
+            weighted_sum,
+            c(3, if (expanded_state[y, x, z, w]) 4)
           )
         }
       }
