@@ -1,5 +1,6 @@
 x <- do.call(rbind, strsplit(readLines("17.txt"), "", fixed = TRUE)) == "#"
 # starting state and rules are z-symmetric, so needn't track strictly negative z
+# using so many loops is ugly, but the alternatives seem to be much slower.
 iterate <- function(state, ylen, xlen, zlen, iter) {
   if (iter == 0)
     return(state)
