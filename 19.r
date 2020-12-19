@@ -10,6 +10,10 @@ sort_rules <- function(rules) {
 }
 sorted_rules <- sort_rules(rules)
 
+# Walk along rule, removing front of string once validated
+# If not valid, or run out of string when rule not finished, return NA,
+# which is stripped out
+# | adds extra strings, to allow checking all of them
 check_along_references <- function(str, rule_components, rules) {
   reference_indices <- strtoi(rule_components)
   Reduce(
@@ -81,5 +85,7 @@ corrected_rules <- `[<-`(
   c(9, 12),
   c(rule_8_replacement, rule_11_replacement)
 )
+# Takes about 2 minutes to run, but I have no experience with problems like this
+# so I'm not sure how to speed it up
 possible2 <- vapply(messages, check, logical(1), corrected_rules)
 sum(possible2) # part two: 260
