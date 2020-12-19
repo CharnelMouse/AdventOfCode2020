@@ -74,7 +74,7 @@ rule_8_replacement <- paste(
 )
 rule_11_replacement <- paste(
   vapply(
-    1:max_len,
+    1:(max_len %/% 2),
     function(n) paste(c(rep("42", n), rep("31", n)), collapse = " "),
     character(1)
   ),
