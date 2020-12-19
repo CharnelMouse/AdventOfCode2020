@@ -58,3 +58,28 @@ check <- function(str, rules) {
 
 possible <- vapply(messages, check, logical(1), sorted_rules)
 sum(possible) # part one: 144
+
+max_len <- max(nchar(messages))
+rule_8_replacement <- paste(
+  vapply(
+    1:max_len,
+    function(n) paste(rep("42", n), collapse = " "),
+    character(1)
+  ),
+  collapse = " | "
+)
+rule_11_replacement <- paste(
+  vapply(
+    1:max_len,
+    function(n) paste(c(rep("42", n), rep("31", n)), collapse = " "),
+    character(1)
+  ),
+  collapse = " | "
+)
+corrected_rules <- `[<-`(
+  sorted_rules,
+  c(9, 12),
+  c(rule_8_replacement, rule_11_replacement)
+)
+possible2 <- vapply(messages, check, logical(1), corrected_rules)
+sum(possible2) # part two: 260
