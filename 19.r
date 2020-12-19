@@ -85,7 +85,7 @@ corrected_rules <- `[<-`(
   c(9, 12),
   c(rule_8_replacement, rule_11_replacement)
 )
-# Takes about 2 minutes to run, but I have no experience with problems like this
+# Takes about 1m40s to run, but I have no experience with problems like this
 # so I'm not sure how to speed it up
 possible2 <- vapply(messages, check, logical(1), corrected_rules)
 sum(possible2) # part two: 260
