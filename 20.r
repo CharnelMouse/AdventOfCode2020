@@ -1,5 +1,3 @@
-# This day's solution is a mess, I'll come back to it if I can.
-
 x <- readLines("20.txt")
 bps <- which(x == "")
 tile_len <- nchar(x[2])
@@ -18,39 +16,8 @@ tiles <- aperm(
   ),
   c(2, 1, 3),
 )
-edge_to_max_int <- function(edge) {
-  bools <- edge == "#"
-  max(
-    sum(2^((tile_len - 1):0)*bools),
-    sum(2^((tile_len - 1):0)*rev(bools))
-  )
-}
-# edges in clockwise order from top
-edge_ids <- apply(
-  tiles,
-  1,
-  function(tile) c(
-    edge_to_max_int(tile[1, ]),
-    edge_to_max_int(tile[, tile_len]),
-    edge_to_max_int(tile[tile_len, ]),
-    edge_to_max_int(tile[, 1])
-  )
-)
-edge_freqs <- table(edge_ids)
-stopifnot(edge_freqs <= 2) ## All edges unique
-border_edges <- strtoi(names(edge_freqs)[edge_freqs == 2])
-is_corner <- apply(
-  edge_ids,
-  2,
-  function(ids) sum(is.element(ids, border_edges)) == 2
-)
-corner_ids <- names(is_corner[is_corner])
-format(
-  prod(strtoi(corner_ids)),
-  scientific = FALSE
-) # part one: 68781323018729
 
-mod1 <- function(x, mod) (x - 1) %% mod + 1
+# edge listing ------------------------------------------------------------
 
 # reverse edge order for left and bottom, to make edges rotation-invariant
 edge_to_int <- function(edge) {
@@ -63,12 +30,7 @@ tile_edges <- function(tile) c(
   edge_to_int(rev(tile[tile_len, ])),
   edge_to_int(rev(tile[, 1]))
 )
-edges <- apply(
-  tiles,
-  1,
-  tile_edges
-)
-
+edges <- apply(tiles, 1, tile_edges)
 # array of edges with and without horizontal flipping
 flip_edge <- function(edge) {
   bools <- outer(
@@ -86,9 +48,31 @@ edge_array <- function(edges) {
   )[flip_pos(1:4), ]
   array(c(edges, flipped_edges), dim = c(dim(edges), 2))
 }
+# array with edge information, which we'll use to place tiles
+# by walking along matching pairs.
+# 1: position of edge (NESW -> 1:4) to rotate to face south (after any flip)
+# 2: tile
+# 3: 1 if no flip, 2 if horizontal flip (before rotations)
 edge_arr <- edge_array(edges)
 
-# start with "corner" tile in top left
+# corner finding ----------------------------------------------------------
+
+edge_freqs <- table(edge_arr)
+stopifnot(all(table(edge_arr) <= 2)) ## All edges unique
+border_edges <- strtoi(names(edge_freqs)[edge_freqs == 2])
+is_corner <- apply(
+  edge_arr[, , 1],
+  2,
+  function(ids) sum(is.element(ids, border_edges)) == 2
+)
+corner_ids <- tile_ids[is_corner]
+format(prod(strtoi(corner_ids)), scientific = FALSE) # part one: 68781323018729
+
+# puzzle solving ----------------------------------------------------------
+
+# one-based modular arithmetic, to make position cycling easier
+mod1 <- function(x, mod) (x - 1) %% mod + 1
+# start with corner tile in top left
 start_tile <- which(is_corner)[1]
 start_tile_edges <- edge_arr[, start_tile, 1]
 start_tile_edge_freq <- table(edge_arr)[as.character(start_tile_edges)]
@@ -131,9 +115,6 @@ edge_travel <- function(inds, val, edge_arr) {
 }
 
 # LHS tiles.
-# 1: position of edge (NESW -> 1:4) to rotate to face south (after any flip)
-# 2: tile
-# 3: 1 if no flip, 2 if horizontal flip (before rotations)
 left_sol_inds <- edge_travel(left_sol_start_ind, left_sol_start_val, edge_arr)
 
 # Now switch to matching tiles horizontally.
@@ -196,6 +177,8 @@ rows <- lapply(
 )
 final_image <- do.call(rbind, rows)
 
+# monster hunting ---------------------------------------------------------
+
 monster_pattern <- c(
   "                  # ",
   "#    ##    ##    ###",
@@ -216,19 +199,14 @@ is_monster_top_left <- function(row, col, image) {
       row:(row + monster_height - 1),
       col:(col + monster_width - 1)
       ]
-    all(
-      apply(
-        monster_pos, 1,
-        function(pos) image_section[pos[1], pos[2]] == "#"
-      )
-    )
+    all(image_section[monster_chars == "#"] == "#")
   }
 }
 monster_starts <- function(image) {
   outer(
     1:nrow(image),
     1:ncol(image),
-    Vectorize(function(y, x) is_monster_top_left(y, x, image))
+    Vectorize(function(row, col) is_monster_top_left(row, col, image))
   )
 }
 final_image_flip <- final_image[1:nrow(final_image), ncol(final_image):1]
@@ -242,26 +220,47 @@ possible_orientations <- list(
   rotate_charmap_to_right(3, final_image_flip),
   rotate_charmap_to_right(4, final_image_flip)
 )
-orientation_contains_monsters <- vapply(
+orientation_monster_start_positions <- vapply(
   possible_orientations,
-  function(image) any(monster_starts(image)),
-  logical(1)
+  monster_starts,
+  matrix(logical(1), nrow = nrow(final_image), ncol = ncol(final_image))
+)
+orientation_contains_monsters <- apply(
+  orientation_monster_start_positions,
+  3, any
 )
 stopifnot(sum(orientation_contains_monsters) == 1)
-used_image <- possible_orientations[[which(orientation_contains_monsters)]]
-monster_start_positions <- which(
-  monster_starts(used_image),
+used_orientation <- which(orientation_contains_monsters)
+used_image <- possible_orientations[[used_orientation]]
+monster_start_positions <-  which(
+  orientation_monster_start_positions[, , used_orientation],
   arr.ind = TRUE
 )
-monster_bools <- which(monster_chars == "#", arr.ind = TRUE)
-monster_image <- matrix(FALSE, nrow = nrow(used_image), ncol = ncol(used_image))
-for (i in 1:nrow(monster_start_positions)) {
-  y <- monster_start_positions[i, 1]
-  x <- monster_start_positions[i, 2]
-  for (j in 1:nrow(monster_bools)) {
-    u <- y + monster_bools[j, 1] - 1
-    v <- x + monster_bools[j, 2] - 1
-    monster_image[u, v] <- TRUE
-  }
-}
-sum(used_image == "#") - sum(monster_image) # part two: 1629
+monster_cell_positions <- which(monster_chars == "#", arr.ind = TRUE)
+# unique in case monsters overlap
+monster_char_positions <- unique(
+  do.call(
+    rbind,
+    lapply(
+      1:nrow(monster_cell_positions),
+      function(n) {
+        rep(
+          monster_cell_positions[n, ],
+          each = nrow(monster_start_positions)
+        ) + monster_start_positions - 1
+      }
+    )
+  )
+)
+monsterless_image <- Reduce(
+  function(img, n) `[<-`(
+    img,
+    monster_char_positions[n, 1], monster_char_positions[n, 2],
+    "O"
+  ),
+  1:nrow(monster_char_positions),
+  init = used_image
+)
+sum(monsterless_image == "#") # part two: 1629
+# final image
+# cat(apply(monsterless_image, 1, paste, collapse = ""), sep = "\n")
