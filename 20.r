@@ -1,3 +1,5 @@
+# This day's solution is a mess, I'll come back to it if I can.
+
 x <- readLines("20.txt")
 bps <- which(x == "")
 tile_len <- nchar(x[2])
@@ -262,4 +264,4 @@ for (i in 1:nrow(monster_start_positions)) {
     monster_image[u, v] <- TRUE
   }
 }
-sum(used_image[!monster_image] == "#") # part two: 1629
+sum(used_image == "#") - sum(monster_image) # part two: 1629
