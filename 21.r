@@ -16,14 +16,16 @@ known_allergens <- Map(
 )
 all_ingredients <- sort(unique(Reduce(c, ingredients)))
 all_allergens <- sort(unique(Reduce(c, known_allergens)))
-dummy_copresence_matrix <- array(
-  FALSE,
-  dim = c(length(all_ingredients), length(all_allergens)),
-  dimnames = list(all_ingredients, all_allergens)
-)
+dummy <- function(x) {
+  array(
+    x,
+    dim = c(length(all_ingredients), length(all_allergens)),
+    dimnames = list(all_ingredients, all_allergens)
+  )
+}
 known_copresent <- simplify2array(Map(
   function(n) {
-    `[<-`(dummy_copresence_matrix, ingredients[[n]], known_allergens[[n]], TRUE)
+    `[<-`(dummy(FALSE), ingredients[[n]], known_allergens[[n]], TRUE)
   },
   seq_along(x)
 ))
@@ -32,13 +34,12 @@ known_copresent <- simplify2array(Map(
 # not(ingredient contains allergen) = (allergen listed, ingredient isn't)
 # so for each food, can_contain is FALSE if [ing, present_all] is FALSE
 
-dummy_can_contain_matrix <- !dummy_copresence_matrix
 can_contain <- Reduce(
   `&`,
   Map(
     function(n) {
       `[<-`(
-        dummy_can_contain_matrix,
+        dummy(TRUE),
         TRUE,
         known_allergens[[n]],
         known_copresent[, known_allergens[[n]], n]
