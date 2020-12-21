@@ -1,8 +1,8 @@
 x <- readLines("20.txt")
 bps <- which(x == "")
+tile_len <- nchar(x[2])
 height <- bps[1] - 2L
-width <- nchar(x[2])
-stopifnot(height == width)
+stopifnot(height == tile_len)
 starts <- c(1, bps + 1)
 tile_ids <- strtoi(substr(x[starts], 6, 9))
 n_tiles <- length(tile_ids)
@@ -11,7 +11,7 @@ contents <- do.call(rbind, strsplit(x[-c(bps, starts)], "", fixed = TRUE))
 tiles <- aperm(
   array(
     contents,
-    c(height, length(contents)/(height*width), width),
+    c(tile_len, length(contents)/tile_len^2, tile_len),
     dimnames = list(NULL, tile_ids, NULL)
   ),
   c(2, 1, 3),
@@ -19,8 +19,8 @@ tiles <- aperm(
 edge_to_max_int <- function(edge) {
   bools <- edge == "#"
   max(
-    sum(2^((width - 1):0)*bools),
-    sum(2^((width - 1):0)*rev(bools))
+    sum(2^((tile_len - 1):0)*bools),
+    sum(2^((tile_len - 1):0)*rev(bools))
   )
 }
 # edges in clockwise order from top
@@ -29,8 +29,8 @@ edge_ids <- apply(
   1,
   function(tile) c(
     edge_to_max_int(tile[1, ]),
-    edge_to_max_int(tile[, width]),
-    edge_to_max_int(tile[height, ]),
+    edge_to_max_int(tile[, tile_len]),
+    edge_to_max_int(tile[tile_len, ]),
     edge_to_max_int(tile[, 1])
   )
 )
@@ -53,12 +53,12 @@ mod1 <- function(x, mod) (x - 1) %% mod + 1
 # reverse edge order for left and bottom, to make edges rotation-invariant
 edge_to_int <- function(edge) {
   bools <- edge == "#"
-  as.integer(sum(2^((width - 1):0)*bools))
+  as.integer(sum(2^((tile_len - 1):0)*bools))
 }
 tile_edges <- function(tile) c(
   edge_to_int(tile[1, ]),
-  edge_to_int(tile[, width]),
-  edge_to_int(rev(tile[height, ])),
+  edge_to_int(tile[, tile_len]),
+  edge_to_int(rev(tile[tile_len, ])),
   edge_to_int(rev(tile[, 1]))
 )
 edges <- apply(
@@ -71,10 +71,10 @@ edges <- apply(
 flip_edge <- function(edge) {
   bools <- outer(
     edge,
-    (width - 1):0,
+    (tile_len - 1):0,
     function(edge, mult) (edge %/% (as.integer(2^mult))) %% 2L
   )
-  apply(bools, 1, function(b) sum(2^((width - 1):0)*rev(b)))
+  apply(bools, 1, function(b) sum(2^((tile_len - 1):0)*rev(b)))
 }
 flip_pos <- function(pos) c(1, 4, 3, 2)[pos]
 edge_array <- function(edges) {
@@ -85,7 +85,6 @@ edge_array <- function(edges) {
   array(c(edges, flipped_edges), dim = c(dim(edges), 2))
 }
 edge_arr <- edge_array(edges)
-stopifnot(sum(table(edge_arr) == 1) == sqrt(n_tiles)*4*2)
 
 # start with "corner" tile in top left
 start_tile <- which(is_corner)[1]
@@ -134,8 +133,6 @@ edge_travel <- function(inds, val, edge_arr) {
 # 2: tile
 # 3: 1 if no flip, 2 if horizontal flip (before rotations)
 left_sol_inds <- edge_travel(left_sol_start_ind, left_sol_start_val, edge_arr)
-stopifnot(nrow(left_sol_inds) == sqrt(n_tiles))
-stopifnot(anyDuplicated(left_sol_inds[, 2]) == 0)
 
 # Now switch to matching tiles horizontally.
 # For each row, start with LHS tile in that row.
@@ -149,17 +146,6 @@ right_start_edges <- apply(
   1,
   function(x) edge_arr[mod1(x[1] + 0:3, 4), x[2], x[3]]
 )
-# All cols should be 2, 2, 1, 2 (except for ends, which have 1 at 4th / 2nd)
-right_start_edge_parities <- apply(
-  right_start_edges,
-  2,
-  function(x) table(edge_arr)[as.character(x)]
-)
-right_start_edge_parities
-stopifnot(identical(right_start_edge_parities[, 1], c(2L, 2L, 1L, 1L)))
-stopifnot(identical(right_start_edge_parities[, sqrt(n_tiles)], c(2L, 1L, 1L, 2L)))
-stopifnot(all(apply(right_start_edge_parities[, -c(1, sqrt(n_tiles))], 2, identical, c(2L, 2L, 1L, 2L))))
-stopifnot(all(table(edge_arr)[as.character(right_start_edges)] == 2))
 
 row_sols <- lapply(
   1:nrow(right_sol_start_inds),
@@ -169,11 +155,6 @@ row_sols <- lapply(
     edge_travel(ind, val, edge_arr)
   }
 )
-sol_row_lengths <- vapply(row_sols, nrow, integer(1))
-# right lengths?
-stopifnot(all(sol_row_lengths == sqrt(n_tiles)))
-# all used?
-stopifnot(length(setdiff(1:n_tiles, unlist(lapply(row_sols, `[`, TRUE, 2)))) == 0)
 
 # combine tiles into final map
 rotate_charmap_to_right <- function(pos, charmap) {
@@ -194,10 +175,10 @@ final_tile <- function(inds) {
   flip <- inds[3]
   tile_map <- tiles[tile, , ]
   if (flip == 2) {
-    tile_map <- tile_map[1:height, width:1]
+    tile_map <- tile_map[1:tile_len, tile_len:1]
   }
   rotated <- rotate_charmap_to_right(pos, tile_map)
-  rotated[2:(height - 1), 2:(width - 1)] # remove edges
+  rotated[2:(tile_len - 1), 2:(tile_len - 1)] # remove edges
 }
 rows <- lapply(
   row_sols,
@@ -248,29 +229,30 @@ monster_starts <- function(image) {
     Vectorize(function(y, x) is_monster_top_left(y, x, image))
   )
 }
-final_image_rot1 <- rotate_charmap_to_right(1, final_image)
-final_image_rot2 <- rotate_charmap_to_right(4, final_image)
-final_image_rot3 <- rotate_charmap_to_right(3, final_image)
-any(monster_starts(final_image))
-any(monster_starts(final_image_rot1))
-any(monster_starts(final_image_rot2))
-any(monster_starts(final_image_rot3))
 final_image_flip <- final_image[1:nrow(final_image), ncol(final_image):1]
-final_image_flip_rot1 <- rotate_charmap_to_right(1, final_image_flip)
-final_image_flip_rot2 <- rotate_charmap_to_right(4, final_image_flip)
-final_image_flip_rot3 <- rotate_charmap_to_right(3, final_image_flip)
-any(monster_starts(final_image_flip))
-any(monster_starts(final_image_flip_rot1))
-any(monster_starts(final_image_flip_rot2))
-any(monster_starts(final_image_flip_rot3))
-
-# manual for now: flip_rot2 contains monsters
+possible_orientations <- list(
+  rotate_charmap_to_right(1, final_image),
+  rotate_charmap_to_right(2, final_image), # original
+  rotate_charmap_to_right(3, final_image),
+  rotate_charmap_to_right(4, final_image),
+  rotate_charmap_to_right(1, final_image_flip),
+  rotate_charmap_to_right(2, final_image_flip),
+  rotate_charmap_to_right(3, final_image_flip),
+  rotate_charmap_to_right(4, final_image_flip)
+)
+orientation_contains_monsters <- vapply(
+  possible_orientations,
+  function(image) any(monster_starts(image)),
+  logical(1)
+)
+stopifnot(sum(orientation_contains_monsters) == 1)
+used_image <- possible_orientations[[which(orientation_contains_monsters)]]
 monster_start_positions <- which(
-  monster_starts(final_image_flip_rot1),
+  monster_starts(used_image),
   arr.ind = TRUE
 )
 monster_bools <- which(monster_chars == "#", arr.ind = TRUE)
-monster_image <- matrix(FALSE, nrow = nrow(final_image), ncol = ncol(final_image))
+monster_image <- matrix(FALSE, nrow = nrow(used_image), ncol = ncol(used_image))
 for (i in 1:nrow(monster_start_positions)) {
   y <- monster_start_positions[i, 1]
   x <- monster_start_positions[i, 2]
@@ -280,4 +262,4 @@ for (i in 1:nrow(monster_start_positions)) {
     monster_image[u, v] <- TRUE
   }
 }
-sum(final_image_flip_rot1[!monster_image] == "#")
+sum(used_image[!monster_image] == "#") # part two: 1629
