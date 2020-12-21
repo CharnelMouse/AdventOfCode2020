@@ -1,4 +1,4 @@
-x <- as.integer(readLines("1.txt"))
+x <- as.integer(readLines("01.txt"))
 fprod <- function(x, n, s) {
   combns <- combn(x, n)
   prod(combns[, colSums(combns) == s])

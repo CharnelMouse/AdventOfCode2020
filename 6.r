@@ -1,4 +1,4 @@
-x <- paste(readLines("6.txt"), collapse = "\n")
+x <- paste(readLines("06.txt"), collapse = "\n")
 groups <- strsplit(
   unlist(strsplit(x, "\n\n", fixed = TRUE)),
   "\n",

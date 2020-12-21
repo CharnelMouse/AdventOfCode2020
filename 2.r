@@ -1,4 +1,4 @@
-x <- readLines("2.txt")
+x <- readLines("02.txt")
 parts <- strsplit(x, "[: -]+")
 mins <- as.integer(vapply(parts, `[`, character(1), 1))
 maxs <- as.integer(vapply(parts, `[`, character(1), 2))

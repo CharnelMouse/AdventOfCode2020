@@ -1,4 +1,4 @@
-x <- readLines("3.txt")
+x <- readLines("03.txt")
 trees <- function(map, x_move, y_move) {
   n_moves <- (length(map) - 1)/y_move
   rows <- cumsum(c(0, rep(y_move, n_moves)))

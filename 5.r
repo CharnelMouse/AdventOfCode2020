@@ -1,4 +1,4 @@
-x <- do.call(cbind, strsplit(readLines("5.txt"), ""))
+x <- do.call(cbind, strsplit(readLines("05.txt"), ""))
 bin <- matrix(as.integer(x == "B" | x == "R"), nrow = nrow(x))
 ids <- colSums(bin * 2^((nrow(x) - 1):0))
 max(ids) # part one

@@ -1,5 +1,5 @@
 ops <- read.delim(
-  "8.txt", header = FALSE, sep = " ", as.is = TRUE, col.names = c("op", "n")
+  "08.txt", header = FALSE, sep = " ", as.is = TRUE, col.names = c("op", "n")
 )
 n_ops <- nrow(ops) # Pass this in everywhere explictly to avoid recalculating it
 exp_parse <- function(op, n, acc, index) {

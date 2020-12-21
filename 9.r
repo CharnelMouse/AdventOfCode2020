@@ -1,5 +1,5 @@
 # The brief version of this takes so long that I just give the quick version.
-x <- as.numeric(readLines("9.txt")) # later numbers too large for R ints
+x <- as.numeric(readLines("09.txt")) # later numbers too large for R ints
 second <- function(n) cumsum(c(n - 1, if (n > 2) 23:(26 - n)))
 by_second <- unlist(lapply(2:25, second)) # Sum order by second index first
 rem_ind <- cumsum(c(1, 1:23)) # Sums involving first precedent

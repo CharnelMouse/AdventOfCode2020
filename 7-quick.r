@@ -1,4 +1,4 @@
-x <- readLines("7.txt")
+x <- readLines("07.txt")
 cleaned <- Reduce(
   function(str, ch) gsub(ch, ":", str, fixed = TRUE),
   c(", ", " contain "),

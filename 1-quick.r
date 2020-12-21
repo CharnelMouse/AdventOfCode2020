@@ -1,4 +1,4 @@
-x <- as.integer(readLines("1.txt"))
+x <- as.integer(readLines("01.txt"))
 fprod <- function(x, n, s) {
   if (n <= 0 || length(x) == 0)
     return(NA_integer_)

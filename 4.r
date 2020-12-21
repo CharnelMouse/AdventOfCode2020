@@ -1,4 +1,4 @@
-x <- paste(readLines("4.txt"), collapse = "\n")
+x <- paste(readLines("04.txt"), collapse = "\n")
 passports <- strsplit(
   gsub(
     "\n", " ",
