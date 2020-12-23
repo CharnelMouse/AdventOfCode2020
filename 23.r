@@ -9,25 +9,6 @@ choose_dest <- function(current, picked, n_cups) {
   else
     n
 }
-move <- function(state) {
-  cup_links <- state[[1]]
-  current_val <- state[[2]]
-  pick1 <- cup_links[current_val]
-  pick2 <- cup_links[pick1]
-  pick3 <- cup_links[pick2]
-  destination <- choose_dest(
-    current_val,
-    c(pick1, pick2, pick3),
-    length(cup_links)
-  )
-  next_val <- cup_links[pick3]
-  cup_links[c(current_val, pick3, destination)] <-
-    c(next_val, cup_links[destination], pick1)
-  list(
-    cup_links,
-    next_val
-  )
-}
 str_acc <- function(current, cup_links) {
   n <- cup_links[current[1]]
   if (n == 1)
@@ -42,13 +23,23 @@ str <- function(cup_links) {
 play <- function(cups, n, ...) {
   cup_links <- integer(length(cups))
   cup_links[cups] <- c(cups[-1], cups[1])
-  state <- list(cup_links, cups[1])
+  current_val <- cups[1]
   while (n > 0) {
-    cat(n, "\r")
-    state <- move(state)
+    pick1 <- cup_links[current_val]
+    pick2 <- cup_links[pick1]
+    pick3 <- cup_links[pick2]
+    destination <- choose_dest(
+      current_val,
+      c(pick1, pick2, pick3),
+      length(cup_links)
+    )
+    next_val <- cup_links[pick3]
+    cup_links[c(current_val, pick3, destination)] <-
+      c(next_val, cup_links[destination], pick1)
+    current_val <- next_val
     n <- n - 1
   }
-  state[[1]]
+  cup_links
 }
 res1 <- play(x, 100)
 str(res1) # part one: 29385746
