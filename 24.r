@@ -42,42 +42,45 @@ start <- Reduce(
   init = blank
 )
 
-iterate <- function(state, ylen, xlen, iter) {
-  if (iter == 0)
-    return(state)
-  expand_yl <- any(state[1, ])
-  expand_yr <- any(state[ylen, ])
-  expand_xl <- any(state[, 1])
-  expand_xr <- any(state[, xlen])
-  new_ylen <- ylen + expand_yl + expand_yr
-  new_xlen <- xlen + expand_xl + expand_xr
-  new_lens <- c(new_ylen, new_xlen)
-  # add empty cells at end of dims to prevent errors in neighbour lookups
-  expanded_state <- array(
-    FALSE,
-    dim = new_lens + 1
-  )
-  expanded_state[expand_yl + 1:ylen, expand_xl + 1:xlen] <- state
-  new_state <- array(FALSE, new_lens)
-  for (y in 1:new_ylen) {
-    for (x in 1:new_xlen) {
-      neighbours <- sum(
-        c(
-          expanded_state[y - 1, x + 0:1],
-          expanded_state[y    , x + -1:1],
-          expanded_state[y + 1, x + -1:0]
-        )
-      )
-      new_state[y, x] <- is.element(
-        neighbours,
-        c(2, if (expanded_state[y, x]) 3)
-      )
-    }
-  }
-  iterate(new_state, new_ylen, new_xlen, iter - 1)
-}
 run <- function(state, iter) {
-  iterate(state, dim(state)[1], dim(state)[2], iter)
+  ylen <- nrow(state)
+  xlen <- ncol(state)
+  while (iter > 0) {
+    expand_yl <- any(state[1, ])
+    expand_yr <- any(state[ylen, ])
+    expand_xl <- any(state[, 1])
+    expand_xr <- any(state[, xlen])
+    new_ylen <- ylen + expand_yl + expand_yr
+    new_xlen <- xlen + expand_xl + expand_xr
+    new_lens <- c(new_ylen, new_xlen)
+    # add empty cells at end of dims to prevent errors in neighbour lookups
+    expanded_state <- array(
+      FALSE,
+      dim = new_lens + 1
+    )
+    expanded_state[expand_yl + 1:ylen, expand_xl + 1:xlen] <- state
+    new_state <- array(FALSE, new_lens)
+    for (y in 1:new_ylen) {
+      for (x in 1:new_xlen) {
+        neighbours <- sum(
+          c(
+            expanded_state[y - 1, x + 0:1],
+            expanded_state[y    , x + -1:1],
+            expanded_state[y + 1, x + -1:0]
+          )
+        )
+        new_state[y, x] <- is.element(
+          neighbours,
+          c(2, if (expanded_state[y, x]) 3)
+        )
+      }
+    }
+    state <- new_state
+    ylen <- new_ylen
+    xlen <- new_xlen
+    iter <- iter - 1
+  }
+  state
 }
 final <- run(start, 100)
 sum(final) # part two: 3768
