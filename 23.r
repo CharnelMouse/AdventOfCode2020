@@ -1,6 +1,4 @@
 x <- strtoi(strsplit(readLines("23.txt"), "")[[1]])
-mod <- function(n, m) (n - 1) %% m + 1
-
 str_acc <- function(current, cup_links) {
   n <- cup_links[current[1]]
   if (n == 1)
@@ -22,11 +20,22 @@ play <- function(cups, n) {
     pick1 <- cup_links[current_val]
     pick2 <- cup_links[pick1]
     pick3 <- cup_links[pick2]
-    pots <- mod(current_val - 1:4, n_cups)
-    destination <- pots[!is.element(pots, c(pick1, pick2, pick3))][1]
+    destination <- current_val - 1
+    while (
+      destination == pick1 ||
+      destination == pick2 ||
+      destination == pick3 ||
+      destination == 0
+    ) {
+      if (destination == 0)
+        destination <- n_cups
+      else
+        destination <- destination - 1
+    }
     next_val <- cup_links[pick3]
-    cup_links[c(current_val, pick3, destination)] <-
-      c(next_val, cup_links[destination], pick1)
+    cup_links[current_val] <- next_val
+    cup_links[pick3] <- cup_links[destination]
+    cup_links[destination] <- pick1
     current_val <- next_val
     n <- n - 1
   }
@@ -34,11 +43,6 @@ play <- function(cups, n) {
 }
 res1 <- play(x, 100)
 str(res1) # part one: 29385746
-
-# part two: add cups on the end so using a million cups,
-# 10 million moves.
-# Added cups do nothing until the current cup is 1,
-# since picked cups are then moved to after 1M, i.e. to the end.
 expanded_cups <- c(x, (length(x) + 1):1000000)
 res2 <- play(expanded_cups, 10000000)
 first <- res2[1]
