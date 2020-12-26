@@ -22,6 +22,4 @@ apply_power <- function(start, n, mod) {
   }
   val
 }
-enckey <- apply_power(keys[2], pow1, mod)
-enckey # part one: 3015200
-
+apply_power(keys[2], pow1, mod) # part one: 3015200
