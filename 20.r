@@ -186,7 +186,8 @@ monster_pattern <- c(
 monster_width <- nchar(monster_pattern[1])
 monster_height <- length(monster_pattern)
 monster_chars <- do.call(rbind, strsplit(monster_pattern, "", fixed = TRUE))
-monster_pos <- which(monster_chars == "#", arr.ind = TRUE)
+monster_cell_positions <- which(monster_chars == "#", arr.ind = TRUE)
+n_monster_cells <- nrow(monster_cell_positions)
 n_used_rows <- nrow(final_image) + 1 - monster_height
 n_used_cols <- ncol(final_image) + 1 - monster_width
 base_row_indices <- 0:(n_used_rows - 1)
@@ -196,11 +197,11 @@ monster_starts <- function(image) {
     function(m, n) {
       m &
         image[
-          base_row_indices + monster_pos[n, 1],
-          base_col_indices + monster_pos[n, 2]
+          base_row_indices + monster_cell_positions[n, 1],
+          base_col_indices + monster_cell_positions[n, 2]
           ] == "#"
     },
-    1:nrow(monster_pos),
+    1:n_monster_cells,
     init = matrix(TRUE, nrow = n_used_rows, ncol = n_used_cols)
   )
 }
@@ -235,13 +236,12 @@ monster_start_positions <-  which(
   orientation_monster_start_positions[, , used_orientation],
   arr.ind = TRUE
 )
-monster_cell_positions <- which(monster_chars == "#", arr.ind = TRUE)
 # unique in case monsters overlap
 monster_char_positions <- unique(
   do.call(
     rbind,
     lapply(
-      1:nrow(monster_cell_positions),
+      1:n_monster_cells,
       function(n) {
         rep(
           monster_cell_positions[n, ],
@@ -251,14 +251,10 @@ monster_char_positions <- unique(
     )
   )
 )
-monsterless_image <- Reduce(
-  function(img, n) `[<-`(
-    img,
-    monster_char_positions[n, 1], monster_char_positions[n, 2],
-    "O"
-  ),
-  1:nrow(monster_char_positions),
-  init = used_image
+monsterless_image <- `[<-`(
+  used_image,
+  monster_char_positions,
+  "O"
 )
 sum(monsterless_image == "#") # part two: 1629
 # final image
