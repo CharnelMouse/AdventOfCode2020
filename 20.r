@@ -1,8 +1,7 @@
 x <- readLines("20.txt")
 bps <- which(x == "")
 tile_len <- nchar(x[2])
-height <- bps[1] - 2L
-stopifnot(height == tile_len)
+stopifnot(bps[1] - 2L == tile_len)
 starts <- c(1, bps + 1)
 tile_ids <- strtoi(substr(x[starts], 6, 9))
 n_tiles <- length(tile_ids)
@@ -189,23 +188,16 @@ monster_height <- length(monster_pattern)
 monster_chars <- do.call(rbind, strsplit(monster_pattern, "", fixed = TRUE))
 monster_pos <- which(monster_chars == "#", arr.ind = TRUE)
 is_monster_top_left <- function(row, col, image) {
-  if (
-    row + monster_height - 1 > nrow(image) ||
-    col + monster_width - 1 > ncol(image)
-  )
-    FALSE
-  else{
-    image_section <- image[
-      row:(row + monster_height - 1),
-      col:(col + monster_width - 1)
-      ]
-    all(image_section[monster_chars == "#"] == "#")
-  }
+  image_section <- image[
+    row:(row + monster_height - 1),
+    col:(col + monster_width - 1)
+    ]
+  all(image_section[monster_chars == "#"] == "#")
 }
 monster_starts <- function(image) {
   outer(
-    1:nrow(image),
-    1:ncol(image),
+    1:(nrow(image) + 1 - monster_height),
+    1:(ncol(image) + 1 - monster_width),
     Vectorize(function(row, col) is_monster_top_left(row, col, image))
   )
 }
@@ -223,7 +215,11 @@ possible_orientations <- list(
 orientation_monster_start_positions <- vapply(
   possible_orientations,
   monster_starts,
-  matrix(logical(1), nrow = nrow(final_image), ncol = ncol(final_image))
+  matrix(
+    logical(1),
+    nrow = nrow(final_image) + 1 - monster_height,
+    ncol = ncol(final_image) + 1 - monster_width
+  )
 )
 orientation_contains_monsters <- apply(
   orientation_monster_start_positions,
