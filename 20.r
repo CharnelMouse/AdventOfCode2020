@@ -187,18 +187,21 @@ monster_width <- nchar(monster_pattern[1])
 monster_height <- length(monster_pattern)
 monster_chars <- do.call(rbind, strsplit(monster_pattern, "", fixed = TRUE))
 monster_pos <- which(monster_chars == "#", arr.ind = TRUE)
-is_monster_top_left <- function(row, col, image) {
-  image_section <- image[
-    row:(row + monster_height - 1),
-    col:(col + monster_width - 1)
-    ]
-  all(image_section[monster_chars == "#"] == "#")
-}
+n_used_rows <- nrow(final_image) + 1 - monster_height
+n_used_cols <- ncol(final_image) + 1 - monster_width
+base_row_indices <- 0:(n_used_rows - 1)
+base_col_indices <- 0:(n_used_cols - 1)
 monster_starts <- function(image) {
-  outer(
-    1:(nrow(image) + 1 - monster_height),
-    1:(ncol(image) + 1 - monster_width),
-    Vectorize(function(row, col) is_monster_top_left(row, col, image))
+  Reduce(
+    function(m, n) {
+      m &
+        image[
+          base_row_indices + monster_pos[n, 1],
+          base_col_indices + monster_pos[n, 2]
+          ] == "#"
+    },
+    1:nrow(monster_pos),
+    init = matrix(TRUE, nrow = n_used_rows, ncol = n_used_cols)
   )
 }
 final_image_flip <- final_image[1:nrow(final_image), ncol(final_image):1]
@@ -217,8 +220,8 @@ orientation_monster_start_positions <- vapply(
   monster_starts,
   matrix(
     logical(1),
-    nrow = nrow(final_image) + 1 - monster_height,
-    ncol = ncol(final_image) + 1 - monster_width
+    nrow = n_used_rows,
+    ncol = n_used_cols
   )
 )
 orientation_contains_monsters <- apply(
