@@ -236,25 +236,21 @@ monster_start_positions <-  which(
   orientation_monster_start_positions[, , used_orientation],
   arr.ind = TRUE
 )
-# unique in case monsters overlap
-monster_char_positions <- unique(
-  do.call(
-    rbind,
-    lapply(
-      1:n_monster_cells,
-      function(n) {
-        rep(
-          monster_cell_positions[n, ],
-          each = nrow(monster_start_positions)
-        ) + monster_start_positions - 1
-      }
+monsterless_image <- Reduce(
+  function(img, n) {
+    cells <- monster_start_positions - 1 +
+      rep(
+        monster_cell_positions[n, ],
+        each = nrow(monster_start_positions)
+      )
+    `[<-`(
+      img,
+      cells,
+      "O"
     )
-  )
-)
-monsterless_image <- `[<-`(
-  used_image,
-  monster_char_positions,
-  "O"
+  },
+  1:n_monster_cells,
+  init = used_image
 )
 sum(monsterless_image == "#") # part two: 1629
 # final image
